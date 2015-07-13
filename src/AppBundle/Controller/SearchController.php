@@ -78,7 +78,15 @@ class SearchController extends Controller
         $priceList = $flightDepartCrawler->filter('.airPrice2')->extract(array('_text'));
         $hourList = $flightDepartCrawler->filter('.availBold2')->extract(array('_text'));
         $dateList = $flightDepartCrawler->filter('.flightDetailsTitles')->extract(array('_text'));
+        $dayInfoList = $flightDepartCrawler->filter('.arrivalDayDisclaimer')->extract(array('_text'));
 //        $list = $flightDepartCrawler->filter('.airContainer2');
+
+        //format dateList
+        $j = 0;
+        while ($j < count($dateList)) {
+            $dateList[$j] = $this->formatDepartureDate($dateList[$j]);
+            $j++;
+        }
 
         $depart = array();
         $i = 0;
@@ -90,6 +98,14 @@ class SearchController extends Controller
             $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
             $item['origin'] = $formattedOriginData['name'];
             $item['departDateTime'] = $formattedOriginData['date'];
+
+            // update arrival date if is next day
+            $info = trim(preg_replace('/\s\s+/', '', $dayInfoList[$i]));
+            if (!empty($info)) {
+                $date = \DateTime::createFromFormat('l, F d, Y', $dateList[$i]);
+                $date->modify('+1 day');
+                $dateList[$i] = $date->format('l, F d, Y');
+            }
 
             $rawDestinationData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3+2]));
             $formattedDestinationData = $this->transformAirportRawData($rawDestinationData, $dateList[$i]);
@@ -105,6 +121,14 @@ class SearchController extends Controller
         $priceList = $flightReturnCrawler->filter('.airPrice2')->extract(array('_text'));
         $hourList = $flightReturnCrawler->filter('.availBold2')->extract(array('_text'));
         $dateList = $flightReturnCrawler->filter('.flightDetailsTitles')->extract(array('_text'));
+        $dayInfoList = $flightReturnCrawler->filter('.arrivalDayDisclaimer')->extract(array('_text'));
+
+        //format dateList
+        $j = 0;
+        while ($j < count($dateList)) {
+            $dateList[$j] = $this->formatDepartureDate($dateList[$j]);
+            $j++;
+        }
 
         $return = array();
         $i = 0;
@@ -116,6 +140,14 @@ class SearchController extends Controller
             $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
             $item['origin'] = $formattedOriginData['name'];
             $item['departDateTime'] = $formattedOriginData['date'];
+
+            // update arrival date if is next day
+            $info = trim(preg_replace('/\s\s+/', '', $dayInfoList[$i]));
+            if (!empty($info)) {
+                $date = \DateTime::createFromFormat('l, F d, Y', $dateList[$i]);
+                $date->modify('+1 day');
+                $dateList[$i] = $date->format('l, F d, Y');
+            }
 
             $rawDestinationData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3+2]));
             $formattedDestinationData = $this->transformAirportRawData($rawDestinationData, $dateList[$i]);
@@ -451,13 +483,27 @@ class SearchController extends Controller
             $result['name'] = trim($explodedData[1]);
         }
 
-        $day = explode(': ', $day);
-        $dateTime = trim($day[1]) . ' ' . $time;
+        $dateTime = $day . ' ' . $time;
         $date = \DateTime::createFromFormat('l, F d, Y g:i A', $dateTime);
 
         $result['date'] = $date->format('Y-m-d\TH:i:s.uP');
 
         return $result;
+    }
+
+    /**
+     * Format data for departure date
+     *
+     * @param $raw
+     *
+     * @return string
+     */
+    public function formatDepartureDate($raw)
+    {
+        $raw = explode(': ', $raw);
+        $date = trim($raw[1]);
+
+        return $date;
     }
 }
 
