@@ -1,0 +1,5 @@
+_assetic:
+    resource: .
+    type: assetic
+_app:
+    resource: /Users/alex/Sites/blk_ops/app/config/routing_dev.yml
