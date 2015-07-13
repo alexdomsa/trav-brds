@@ -383,7 +383,7 @@ class SearchController extends Controller
 
     /**
      * @Route("/resweb/rest/cart/getCartItems", name="getCartItems")
-     * @Method({"GET"})
+     * @Method({"POST"})
      *
      * @return JsonResponse
      */
