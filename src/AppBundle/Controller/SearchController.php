@@ -12,7 +12,7 @@ use Goutte\Client;
 class SearchController extends Controller
 {
     /**
-     * @Route("/flights", name="flights")
+     * @Route("/resweb/rest/flights/getFlightAvail", name="resweb/rest/flights/getFlightAvail")
      * @Method({"POST"})
      *
      * @param Request $request
