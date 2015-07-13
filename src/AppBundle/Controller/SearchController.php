@@ -12,7 +12,7 @@ use Goutte\Client;
 class SearchController extends Controller
 {
     /**
-     * @Route("/resweb/rest/flights/getFlightAvail", name="resweb/rest/flights/getFlightAvail")
+     * @Route("/resweb/rest/flight/getFlightAvail", name="resweb/rest/flight/getFlightAvail")
      * @Method({"POST"})
      *
      * @param Request $request
@@ -25,15 +25,8 @@ class SearchController extends Controller
         $requestRaw = $request->getContent();
         $requestData = json_decode($requestRaw, true);
 
-        // determine key from array containing flight data
-        if (is_array($requestData[0])) {
-            $key = 0;
-        } else {
-            $key = 1;
-        }
-
         // determine repart/arrive leg keys
-        if ($requestData[$key]['departArriveRequest'][0]['rph'] === '1') {
+        if ($requestData['departArriveRequest'][0]['rph'] === '1') {
             $firstLeg = 0;
             $secondLeg = 1;
         } else {
@@ -41,14 +34,14 @@ class SearchController extends Controller
             $secondLeg = 0;
         }
 
-        $origin = $requestData[$key]['departArriveRequest'][$firstLeg]['departAirport'];
-        $startDate = \DateTime::createFromFormat('Y-m-d', $requestData[$key]['departArriveRequest'][$firstLeg]['requestDate']);
+        $origin = $requestData['departArriveRequest'][$firstLeg]['departAirport'];
+        $startDate = \DateTime::createFromFormat('Y-m-d', $requestData['departArriveRequest'][$firstLeg]['requestDate']);
         $startDate = $startDate->format('n/j/Y');
-        $destination = $requestData[$key]['departArriveRequest'][$firstLeg]['arriveAirport'];
-        $endDate = \DateTime::createFromFormat('Y-m-d', $requestData[$key]['departArriveRequest'][$secondLeg]['requestDate']);
+        $destination = $requestData['departArriveRequest'][$firstLeg]['arriveAirport'];
+        $endDate = \DateTime::createFromFormat('Y-m-d', $requestData['departArriveRequest'][$secondLeg]['requestDate']);
         $endDate = $endDate->format('n/j/Y');
-        $children = count($requestData[$key]['travelerProfile']['childAge']);
-        $adults = $requestData[$key]['travelerProfile']['numTravelers'] - $children;
+        $children = count($requestData['travelerProfile']['childAge']);
+        $adults = $requestData['travelerProfile']['numTravelers'] - $children;
 
         $formParams = array(
             'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$origin'                          => $origin,
@@ -66,7 +59,7 @@ class SearchController extends Controller
             $i = 1;
             while ($i <= $children) {
                 $formParams['ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$passengers$pr$ctl00$pi$cr$ctl0' . $i . '$ChildAgeInput']
-                    = $requestData[1]['travelerProfile']['childAge'][$i - 1];
+                    = $requestData['travelerProfile']['childAge'][$i - 1];
                 $i++;
             }
         }
@@ -120,10 +113,7 @@ class SearchController extends Controller
         }
 
         // construct response structure
-        $response = array();
-        $response[] = $this->container->getParameter('api_base_url') . $this->container->get('request')->get('_route');
-
-        $obj = new \stdClass();
+        $response = new \stdClass();
 
         $payloadAttributes = new \stdClass();
         $payloadAttributes->property = array();
@@ -369,12 +359,10 @@ class SearchController extends Controller
         $returnLeg->rph = '2';
         $returnLeg->requestRPH = '2';
 
-        $obj->payloadAttributes = $payloadAttributes;
-        $obj->error = array();
-        $obj->warning = array();
-        $obj->journeySet = array($departLeg, $returnLeg);
-
-        $response[] = $obj;
+        $response->payloadAttributes = $payloadAttributes;
+        $response->error = array();
+        $response->warning = array();
+        $response->journeySet = array($departLeg, $returnLeg);
 
         return new JsonResponse($response);
     }

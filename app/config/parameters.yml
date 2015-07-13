@@ -12,4 +12,3 @@ parameters:
     mailer_password: null
     locale: en
     secret: ThisTokenIsNotSoSecretChangeIt
-    api_base_url: 'http://blk-ops.local/'
