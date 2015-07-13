@@ -84,10 +84,17 @@ class SearchController extends Controller
         $i = 0;
         while ($i < count($priceList)) {
             $item = array();
-            $item['date'] = $dateList[$i];
             $item['price'] = (int) str_replace(array('$', ','), '', $priceList[$i]);
-            $item['origin'] = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
-            $item['destination'] = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3+2]));
+
+            $rawOriginData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
+            $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
+            $item['origin'] = $formattedOriginData['name'];
+            $item['departDateTime'] = $formattedOriginData['date'];
+
+            $rawDestinationData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3+2]));
+            $formattedDestinationData = $this->transformAirportRawData($rawDestinationData, $dateList[$i]);
+            $item['destination'] = $formattedDestinationData['name'];
+            $item['arriveDateTime'] = $formattedDestinationData['date'];
 
             $depart[$i] = $item;
             $i++;
@@ -103,10 +110,17 @@ class SearchController extends Controller
         $i = 0;
         while ($i < count($priceList)) {
             $item = array();
-            $item['date'] = $dateList[$i];
             $item['price'] = (int) str_replace(array('$', ','), '', $priceList[$i]);
-            $item['origin'] = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
-            $item['destination'] = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3+2]));
+
+            $rawOriginData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
+            $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
+            $item['origin'] = $formattedOriginData['name'];
+            $item['departDateTime'] = $formattedOriginData['date'];
+
+            $rawDestinationData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3+2]));
+            $formattedDestinationData = $this->transformAirportRawData($rawDestinationData, $dateList[$i]);
+            $item['destination'] = $formattedDestinationData['name'];
+            $item['arriveDateTime'] = $formattedDestinationData['date'];
 
             $return[$i] = $item;
             $i++;
@@ -161,9 +175,9 @@ class SearchController extends Controller
             $leg->flightSchedule = null;
             $leg->sequenceNum = 1;
             $leg->departTerminal = $departJorney['origin'];
-            $leg->departDateTime = $departJorney['origin'];
+            $leg->departDateTime = $departJorney['departDateTime'];
             $leg->arriveTerminal = $departJorney['destination'];
-            $leg->arriveDateTime = $departJorney['destination'];
+            $leg->arriveDateTime = $departJorney['arriveDateTime'];
             $leg->miles = 150;
             $leg->durationMinutes = 150;
             $leg->disembarkAtArrival = true;
@@ -279,9 +293,9 @@ class SearchController extends Controller
             $leg->flightSchedule = null;
             $leg->sequenceNum = 1;
             $leg->departTerminal = $returnJorney['origin'];
-            $leg->departDateTime = $returnJorney['origin'];
+            $leg->departDateTime = $returnJorney['departDateTime'];
             $leg->arriveTerminal = $returnJorney['destination'];
-            $leg->arriveDateTime = $returnJorney['destination'];
+            $leg->arriveDateTime = $returnJorney['arriveDateTime'];
             $leg->miles = 150;
             $leg->durationMinutes = 150;
             $leg->disembarkAtArrival = true;
@@ -365,6 +379,39 @@ class SearchController extends Controller
         $response->journeySet = array($departLeg, $returnLeg);
 
         return new JsonResponse($response);
+    }
+
+    /**
+     * Extract airport name and departure time from raw data
+     *
+     * @param $rawData
+     * @param $day
+     *
+     * @return array
+     */
+    public function transformAirportRawData($rawData, $day)
+    {
+        $result = array();
+
+        if (strpos($rawData, ' AM ') !== false) {
+            $explodedData = explode('AM', $rawData);
+            $time = $explodedData[0] . 'AM';
+            $result['name'] = trim($explodedData[1]);
+        }
+
+        if (strpos($rawData, ' PM ') !== false) {
+            $explodedData = explode('PM', $rawData);
+            $time = $explodedData[0] . 'PM';
+            $result['name'] = trim($explodedData[1]);
+        }
+
+        $day = explode(': ', $day);
+        $dateTime = trim($day[1]) . ' ' . $time;
+        $date = \DateTime::createFromFormat('l, F d, Y g:i A', $dateTime);
+
+        $result['date'] = $date->format('Y-m-d\TH:i:s.uP');
+
+        return $result;
     }
 }
 
