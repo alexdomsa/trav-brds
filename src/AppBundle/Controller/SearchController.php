@@ -12,7 +12,7 @@ use Goutte\Client;
 class SearchController extends Controller
 {
     /**
-     * @Route("/resweb/rest/flight/getFlightAvail", name="resweb/rest/flight/getFlightAvail")
+     * @Route("/resweb/rest/flight/getFlightAvail", name="getFlightAvail")
      * @Method({"POST"})
      *
      * @param Request $request
@@ -377,6 +377,52 @@ class SearchController extends Controller
         $response->error = array();
         $response->warning = array();
         $response->journeySet = array($departLeg, $returnLeg);
+
+        return new JsonResponse($response);
+    }
+
+    /**
+     * @Route("/resweb/rest/cart/getCartItems", name="getCartItems")
+     * @Method({"GET"})
+     *
+     * @return JsonResponse
+     */
+    public function getCartItemsAction()
+    {
+        $payloadAttributes = new \stdClass();
+        $payloadAttributes->property = array();
+        $payloadAttributes->bookingTypeID = 1;
+        $payloadAttributes->bookingChannelID = 1;
+        $payloadAttributes->transactionIdentifier = hash('md5', time() . rand());
+        $payloadAttributes->version = 1;
+        $payloadAttributes->timeStamp = date('Y-m-d\TH:i:s.000P');
+
+        $cartItem = new \stdClass();
+        $cartItem->priceComponent = array();
+        $cartItem->tag = array();
+        $cartItem->property = array();
+        $cartItem->code = 'CCV';
+        $cartItem->source = 'G4';
+        $cartItem->description = 'CARRIER USAGE CHARGE';
+        $cartItem->value = 0;
+        $cartItem->date = null;
+
+        $cartItemOptional = new \stdClass();
+        $cartItemOptional->priceComponent = array();
+        $cartItemOptional->tag = array();
+        $cartItemOptional->property = array();
+        $cartItemOptional->code = 'CH';
+        $cartItemOptional->source = 'G4';
+        $cartItemOptional->description = 'CHG FEE';
+        $cartItemOptional->value = 0;
+        $cartItemOptional->date = null;
+
+        $response = new \stdClass();
+        $response->payloadAttributes = $payloadAttributes;
+        $response->error = array();
+        $response->warning = array();
+        $response->cartItem = array($cartItem);
+        $response->cartItemOptional = array($cartItemOptional);
 
         return new JsonResponse($response);
     }
