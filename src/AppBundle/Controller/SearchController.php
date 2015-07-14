@@ -431,8 +431,8 @@ class SearchController extends Controller
         $endDate = \DateTime::createFromFormat('Y-m-d', $request->query->get('travelEndDate'));
         $endDate = $endDate->format('n/j/Y');
         $rooms = $request->query->get('rooms');
-        $adults = $request->query->get('adults');
-        $children = $request->query->get('children');
+        $adults = (int) $request->query->get('adults');
+        $children = (int) $request->query->get('children');
 
         $formParams = array(
             'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$origin'                          => $origin,
@@ -498,6 +498,39 @@ class SearchController extends Controller
             $hotel->amenities = null;
             $hotel->featured = null;
             $hotel->slideshowimages = null;
+
+            // extract room information
+            $val = $crawler->filter('#_f' . $i)->filter('input[name="hotelComponentBtn"]')->getNode(0)->getAttribute('onclick');
+            preg_match_all('/\?(.*?)\'/', $val, $out);
+            $partUrl = '?' . trim($out[1][0]);
+            $roomInfoCrawler = $client->request('GET', 'http://package.barcelo.com/Availability/RatesForHotel.aspx' . $partUrl);
+
+            $roomTypeNameList = $roomInfoCrawler->filter('.roomTypeName2')->extract('_text');
+            $roomPriceList = $roomInfoCrawler->filter('.roomSelect')->extract('_text');
+            $j = 0;
+            while ($j < count($roomTypeNameList)) {
+                $room = new \stdClass();
+                $room->name = trim(preg_replace('/\s\s+/', '', $roomTypeNameList[$j]));
+                $room->roomRecId = hash('md5', time() . rand());
+                $room->description = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec neque felis, vestibulum eu viverra eget, maximus quis lacus. Vestibulum euismod in erat id consequat.';
+                $room->image = '';
+                $room->numQualified = null;
+                $room->availCodeId = 1;
+
+                $guestCount = new \stdClass();
+                $guestCount->nights = array();
+                $totalPrice = $this->extractTotalPrice($roomPriceList[$j]);
+                $guestCount->regularPrice = $totalPrice;
+                $guestCount->totalPrice = $totalPrice;
+                $guestCount->taxes = 0;
+                $guestCount->numGuests = $adults + $children;
+
+                $room->guestCount = $guestCount;
+
+                $hotel->rooms[] = $room;
+
+                $j++;
+            }
 
             $response[] = $hotel;
             $i++;
@@ -627,6 +660,21 @@ class SearchController extends Controller
         preg_match_all('/\:([A-Za-z0-9\- ]+?)\|/', $data, $out);
 
         return trim($out[1][0]);
+    }
+
+    /**
+     * Extract total price for room from provided string
+     *
+     * @param $data
+     *
+     * @return int
+     */
+    public function extractTotalPrice($data)
+    {
+        $data = trim(preg_replace('/\s\s+/', '', $data));
+        $out = explode('$', $data);
+
+        return (int) str_replace(array(','), '', $out[2]);
     }
 }
 
