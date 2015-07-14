@@ -424,7 +424,7 @@ class SearchController extends Controller
     public function getHotelsAction(Request $request)
     {
         // Prepare data from request for form submission
-        $origin = $request->query->get('originAirportCode');
+        $origin = $request->query->get('departingAirportCode');
         $destination = $request->query->get('airportCode');
         $startDate = \DateTime::createFromFormat('Y-m-d', $request->query->get('travelStartDate'));
         $startDate = $startDate->format('n/j/Y');
@@ -515,7 +515,7 @@ class SearchController extends Controller
                 $room->description = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec neque felis, vestibulum eu viverra eget, maximus quis lacus. Vestibulum euismod in erat id consequat.';
                 $room->image = '';
                 $room->numQualified = null;
-                $room->availCodeId = 1;
+                $room->availCodeID = 1;
 
                 $guestCount = new \stdClass();
                 $guestCount->nights = array();
