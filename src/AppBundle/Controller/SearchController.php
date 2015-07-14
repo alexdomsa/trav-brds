@@ -414,6 +414,99 @@ class SearchController extends Controller
     }
 
     /**
+     * @Route("/hsm/v1/api/hotels/search", name="hotels")
+     * @Method({"GET"})
+     *
+     * @param Request $request
+     *
+     * @return JsonResponse
+     */
+    public function getHotelsAction(Request $request)
+    {
+        // Prepare data from request for form submission
+        $origin = $request->query->get('originAirportCode');
+        $destination = $request->query->get('airportCode');
+        $startDate = \DateTime::createFromFormat('Y-m-d', $request->query->get('travelStartDate'));
+        $startDate = $startDate->format('n/j/Y');
+        $endDate = \DateTime::createFromFormat('Y-m-d', $request->query->get('travelEndDate'));
+        $endDate = $endDate->format('n/j/Y');
+        $rooms = $request->query->get('rooms');
+        $adults = $request->query->get('adults');
+        $children = $request->query->get('children');
+
+        $formParams = array(
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$origin'                          => $origin,
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$destination'                     => $destination,
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$departure'                       => $startDate,
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$return'                          => $endDate,
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$passengers$numrooms'             => 1, // $requestData['rooms'],
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$passengers$pr$ctl00$pi$adults'   => $adults,
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$passengers$pr$ctl00$pi$children' => $children,
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$hotelcheckin'                    => $startDate,
+            'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$hotelcheckout'                   => $endDate
+        );
+
+        if ($children > 0) {
+            $i = 1;
+            while ($i <= $children) {
+                $formParams['ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$passengers$pr$ctl00$pi$cr$ctl0' . $i . '$ChildAgeInput']
+//                    = $requestData['travelerProfile']['childAge'][$i - 1];
+                    = rand(1, 14); // hardcode children age since it is not receive from "Priceline" call
+                $i++;
+            }
+        }
+
+        // Access and submit form
+        $client = new Client();
+        $crawler = $client->request('GET', 'http://package.barcelo.com/Search/Default.aspx');
+        $form = $crawler->selectButton('Search')->form();
+        $crawler = $client->submit($form, $formParams);
+
+        // Select elements from crawler
+        $nameList = $crawler->filter('.hotelTitleZone2')->extract(array('_text'));
+        $priceList = $crawler->filter('.componentPriceHotel2')->extract(array('_text'));
+        $locationList = $crawler->filter('.hotelLocationZone')->extract(array('_text'));
+        $landmarkList = $crawler->filter('.hotelLandmark')->extract(array('_text'));
+        $imageFilterList = $crawler->filter('.imgPosition');
+        $imageList = array();
+        foreach ($imageFilterList as $element) {
+            $imageList[] = $element->getAttribute('src');
+        }
+        unset($imageFilterList);
+
+        $response = array();
+        $i = 0;
+        while ($i < count($nameList)) {
+            $hotel = new \stdClass();
+            $hotel->id = hash('md5', time() . rand());
+            $hotel->url = null;
+            $hotel->name = trim(preg_replace('/\s\s+/', '', $nameList[$i]));
+            $hotel->address = '';                   // sa completam cu adresa corecta dupa ce incarcam harta sau sa punem locationList?
+            $hotel->addressComponents = array();
+            $hotel->phone = null;
+            $hotel->latitude = '';
+            $hotel->longitude = '';
+            $hotel->mapurl = '';
+            $hotel->imageUrl = $imageList[$i];
+            $hotel->distanceFromAirport = $this->extractDistance($landmarkList[$i]);
+            $hotel->description = null;
+            $hotel->score = '';
+            $hotel->location = $this->extractLocation($locationList[$i]);
+            $hotel->rooms = array();
+            $hotel->dining = null;
+            $hotel->accommodations = null;
+            $hotel->amenities = null;
+            $hotel->featured = null;
+            $hotel->slideshowimages = null;
+
+            $response[] = $hotel;
+            $i++;
+        }
+
+        return new JsonResponse($response);
+    }
+
+    /**
      * @Route("/resweb/rest/cart/getCartItems", name="getCartItems")
      * @Method({"POST"})
      *
@@ -504,6 +597,36 @@ class SearchController extends Controller
         $date = trim($raw[1]);
 
         return $date;
+    }
+
+    /**
+     * Extract distance from provided string
+     *
+     * @param $data
+     *
+     * @return float
+     */
+    public function extractDistance($data)
+    {
+        preg_match_all('/\d+(?:\.\d+)?/', $data, $matches);
+        $floats = array_map('floatval', $matches[0]);
+
+        return $floats[0];
+    }
+
+    /**
+     * Extract location from provided string
+     *
+     * @param $data
+     *
+     * @return string
+     */
+    public function extractLocation($data)
+    {
+        $data = trim(preg_replace('/\s\s+/', '', $data));
+        preg_match_all('/\:([A-Za-z0-9\- ]+?)\|/', $data, $out);
+
+        return trim($out[1][0]);
     }
 }
 
