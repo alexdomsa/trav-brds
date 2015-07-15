@@ -5,6 +5,7 @@ namespace AppBundle\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Goutte\Client;
@@ -93,7 +94,7 @@ class SearchController extends Controller
         while ($i < count($priceList)) {
             $item = array();
             $item['price'] = (int) str_replace(array('$', ','), '', $priceList[$i]);
-            $item['price'] = (int) $item['price'] / 4; // approximate flight item price
+            $item['price'] = (int) $item['price'];
 
             $rawOriginData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
             $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
@@ -136,7 +137,7 @@ class SearchController extends Controller
         while ($i < count($priceList)) {
             $item = array();
             $item['price'] = (int) str_replace(array('$', ','), '', $priceList[$i]);
-            $item['price'] = (int) $item['price'] / 4; // approximate flight item price
+            $item['price'] = (int) $item['price'];
 
             $rawOriginData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
             $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
@@ -435,6 +436,7 @@ class SearchController extends Controller
         $rooms = $request->query->get('rooms');
         $adults = (int) $request->query->get('adults');
         $children = (int) $request->query->get('children');
+        $flightPrice = (int) $request->query->get('flightPrice');
 
         $formParams = array(
             'ctl00$ctl01$ContentPlaceHolder$ContentPlaceHolder$SearchComponents$scc$rt$origin'                          => $origin,
@@ -462,7 +464,39 @@ class SearchController extends Controller
         $client = new Client();
         $crawler = $client->request('GET', 'http://package.barcelo.com/Search/Default.aspx');
         $form = $crawler->selectButton('Search')->form();
-        $crawler = $client->submit($form, $formParams);
+        $client->submit($form, $formParams);
+
+        // Select flight before accessing hotels page, so that it reflects correct price
+        $flightDepartCrawler = $client->request('GET', 'http://package.barcelo.com/Availability/Default.aspx?itin=1&cmpt=A&leg=1');
+        $itemIds = $flightDepartCrawler->filter('.airContainer2')->each(function (Crawler $node, $i) use ($flightPrice) {
+            $price = $node->filter('.airPrice2')->text();
+            $price = (int) str_replace(array('$', ','), '', $price);
+
+            if ($price === $flightPrice) {
+                $value = $node->filter('#Button3')->getNode(0)->getAttribute('onclick');
+                $expl = explode(',', $value);
+                $itemId = preg_replace('/\'/', '', $expl[1]);
+
+                return $itemId;
+            }
+
+            return null;
+        });
+
+        foreach ($itemIds as $itemId) {
+            if (!is_null($itemId)) {
+                $jsonItem = new \stdClass();
+                $jsonItem->itinerary = 1;
+                $jsonItem->itemId = $itemId;
+                $jsonItem->legNumber = 1;
+                $jsonItem->availabilityFlow = 'StandardToModalFlow';
+                $json = '{"itinerary":1,"itemId":"' . $itemId . '","legNumber":1,"availabilityFlow":"StandardToModalFlow"}';
+                $client->request('POST', 'http://package.barcelo.com/availability/AvailabilityAddItem.asmx/AddAirItem', array(), array(), array('HTTP_CONTENT_TYPE' => 'application/json'), $json);
+
+                break;
+            }
+        }
+        $crawler = $client->request('GET', 'http://package.barcelo.com/Availability/Default.aspx?itin=1&cmpt=H');
 
         // Select elements from crawler
         $nameList = $crawler->filter('.hotelTitleZone2')->extract(array('_text'));
