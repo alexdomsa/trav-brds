@@ -93,6 +93,7 @@ class SearchController extends Controller
         while ($i < count($priceList)) {
             $item = array();
             $item['price'] = (int) str_replace(array('$', ','), '', $priceList[$i]);
+            $item['price'] = (int) $item['price'] / 4; // approximate flight item price
 
             $rawOriginData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
             $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
@@ -135,6 +136,7 @@ class SearchController extends Controller
         while ($i < count($priceList)) {
             $item = array();
             $item['price'] = (int) str_replace(array('$', ','), '', $priceList[$i]);
+            $item['price'] = (int) $item['price'] / 4; // approximate flight item price
 
             $rawOriginData = trim(preg_replace('/\s\s+/', ' ', $hourList[$i*3]));
             $formattedOriginData = $this->transformAirportRawData($rawOriginData, $dateList[$i]);
