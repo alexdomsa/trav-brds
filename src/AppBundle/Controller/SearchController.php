@@ -214,7 +214,6 @@ class SearchController extends Controller
             $leg->priceComponent = array();
             $leg->priceComponentOptional = array();
             $leg->flightSchedule = null;
-            $leg->sequenceNum = 1;
             $leg->departTerminal = $departJorney['origin'];
             $leg->departDateTime = $departJorney['departDateTime'];
             $leg->arriveTerminal = $departJorney['destination'];
@@ -224,6 +223,7 @@ class SearchController extends Controller
             $leg->disembarkAtArrival = true;
             $cnt = 0;
             while ($cnt < $departJorney['stops'] + 1) {
+                $leg->sequenceNum = $cnt + 1;
                 $segment->leg[] = $leg;
                 $cnt++;
             }
@@ -336,7 +336,6 @@ class SearchController extends Controller
             $leg->priceComponent = array();
             $leg->priceComponentOptional = array();
             $leg->flightSchedule = null;
-            $leg->sequenceNum = 1;
             $leg->departTerminal = $returnJorney['origin'];
             $leg->departDateTime = $returnJorney['departDateTime'];
             $leg->arriveTerminal = $returnJorney['destination'];
@@ -346,6 +345,7 @@ class SearchController extends Controller
             $leg->disembarkAtArrival = true;
             $cnt = 0;
             while ($cnt < $returnJorney['stops'] + 1) {
+                $leg->sequenceNum = $cnt + 1;
                 $segment->leg[] = $leg;
                 $cnt++;
             }
