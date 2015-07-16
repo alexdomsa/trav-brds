@@ -80,6 +80,7 @@ class SearchController extends Controller
         $hourList = $flightDepartCrawler->filter('.availBold2')->extract(array('_text'));
         $dateList = $flightDepartCrawler->filter('.flightDetailsTitles')->extract(array('_text'));
         $dayInfoList = $flightDepartCrawler->filter('.arrivalDayDisclaimer')->extract(array('_text'));
+        $stopsList = $flightDepartCrawler->filter('.stopsText')->extract(array('_text'));
 //        $list = $flightDepartCrawler->filter('.airContainer2');
 
         //format dateList
@@ -114,6 +115,8 @@ class SearchController extends Controller
             $item['destination'] = $formattedDestinationData['name'];
             $item['arriveDateTime'] = $formattedDestinationData['date'];
 
+            $item['stops'] = (int) $stopsList[$i];
+
             $depart[$i] = $item;
             $i++;
         }
@@ -124,6 +127,7 @@ class SearchController extends Controller
         $hourList = $flightReturnCrawler->filter('.availBold2')->extract(array('_text'));
         $dateList = $flightReturnCrawler->filter('.flightDetailsTitles')->extract(array('_text'));
         $dayInfoList = $flightReturnCrawler->filter('.arrivalDayDisclaimer')->extract(array('_text'));
+        $stopsList = $flightReturnCrawler->filter('.stopsText')->extract(array('_text'));
 
         //format dateList
         $j = 0;
@@ -156,6 +160,8 @@ class SearchController extends Controller
             $formattedDestinationData = $this->transformAirportRawData($rawDestinationData, $dateList[$i]);
             $item['destination'] = $formattedDestinationData['name'];
             $item['arriveDateTime'] = $formattedDestinationData['date'];
+
+            $item['stops'] = (int) $stopsList[$i];
 
             $return[$i] = $item;
             $i++;
@@ -216,7 +222,11 @@ class SearchController extends Controller
             $leg->miles = 150;
             $leg->durationMinutes = 150;
             $leg->disembarkAtArrival = true;
-            $segment->leg[] = $leg;
+            $cnt = 0;
+            while ($cnt < $departJorney['stops'] + 1) {
+                $segment->leg[] = $leg;
+                $cnt++;
+            }
 
             $equipment = new \stdClass();
             $equipment->seatMap = null;
@@ -334,7 +344,11 @@ class SearchController extends Controller
             $leg->miles = 150;
             $leg->durationMinutes = 150;
             $leg->disembarkAtArrival = true;
-            $segment->leg[] = $leg;
+            $cnt = 0;
+            while ($cnt < $returnJorney['stops'] + 1) {
+                $segment->leg[] = $leg;
+                $cnt++;
+            }
 
             $equipment = new \stdClass();
             $equipment->seatMap = null;
