@@ -81,6 +81,21 @@ class SearchController extends Controller
         $dateList = $flightDepartCrawler->filter('.flightDetailsTitles')->extract(array('_text'));
         $dayInfoList = $flightDepartCrawler->filter('.arrivalDayDisclaimer')->extract(array('_text'));
         $stopsList = $flightDepartCrawler->filter('.stopsText')->extract(array('_text'));
+
+        // select only departing flights with carrier of the default flight
+        $carrierList = $flightDepartCrawler->filter('#flightCarrierDetails')->each(function (Crawler $node, $i) {
+            $selectedNode = $node->filter('img')->getNode(0);
+            if (!is_null($selectedNode)) {
+                return $selectedNode->getAttribute('alt');
+            }
+
+            return null;
+        });
+        foreach ($carrierList as $carrier) {
+            if (!is_null($carrier)) {
+                $selectedCarrier = $carrier;
+            }
+        }
 //        $list = $flightDepartCrawler->filter('.airContainer2');
 
         //format dateList
@@ -93,6 +108,11 @@ class SearchController extends Controller
         $depart = array();
         $i = 0;
         while ($i < count($priceList)) {
+            if ($carrierList[$i] !== $selectedCarrier) {
+                $i++;
+                continue;
+            }
+
             $item = array();
             $item['price'] = (int) str_replace(array('$', ','), '', $priceList[$i]);
             $item['price'] = (int) $item['price'];
@@ -117,7 +137,7 @@ class SearchController extends Controller
 
             $item['stops'] = (int) $stopsList[$i];
 
-            $depart[$i] = $item;
+            $depart[] = $item;
             $i++;
         }
 
